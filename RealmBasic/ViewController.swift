@@ -20,14 +20,15 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        observeRealm()
-        
+        view.backgroundColor = UIColor.white
+
         creatButton("AddRealm", 200, #selector(addRealm))
         creatButton("UpdateRealm", 100, #selector(updateRealm))
         creatButton("QueryRealm", 0, #selector(queryRealm))
-        creatButton("Next", -100, #selector(nextPage))
-        view.backgroundColor = UIColor.white
+        creatButton("DeleteRealm", -100, #selector(deleteRealm))
+        creatButton("Next", -200, #selector(nextPage))
+        
+        observeRealm()
     }
     
     func creatButton(_ title: String,_ margin: CGFloat,_ action: Selector) {
@@ -52,10 +53,40 @@ class ViewController: UIViewController {
         person.books.append(book3)
         person.cars.append(car)
         
-        // 更新\添加对象
+        // 更新\添加对象（对象存在数据库就是更新，不存在就添加）
         try! defaultRealm.write {
-            defaultRealm.add(person)
+            defaultRealm.add(person)  // 添加单个对象
+            
+            // 如果数据模型类中包含了主键，那么可以使用 Realm().add(_:update:)，从而让 Realm 基于主键来自动更新或者添加对象。
+            // 如果没有定义主键，那么最好不要对这类对象传递 update: true 参数。
+            // 因为books已经存在，所以books是更新
+            defaultRealm.add([book1,book2,book3], update: true)   // 添加多个对象
         }
+    }
+    
+    @objc func queryRealm() {
+        
+        // 主键查找元素
+        let car = defaultRealm.object(ofType: Car.self, forPrimaryKey: UUID().uuidString)
+        print("car == \(String(describing: car))")
+        
+        /* 条件查询(NSPredicate语法)
+         * 过滤、排序
+         * 过滤（filter）可以链式查询
+         * 排序 sorted(byKeyPath:) 和 sorted(byProperty:)
+         */
+        let books = defaultRealm.objects(Book.self).filter("name = '百年孤独'").sorted(byKeyPath: "price")
+        print("books == \(books)")
+        
+        // sorted 不支持 将多个属性用作排序基准，此外也无法链式排序（只有最后一个 sorted 调用会被使用） 如果要对多个属性进行排序，请使用 sorted(by:) 方法，然后向其中输入多个 SortDescriptor 对象。
+        let result = books.sorted(byKeyPath: "name")
+        print("result == \(result)")
+        
+        let booksAscending = defaultRealm.objects(Book.self).sorted(byKeyPath: "price", ascending: false)
+        print("booksAscending == \(booksAscending)")
+        
+        let results = defaultRealm.objects(Book.self).sorted(by: ["name", "price"])
+        print("results == \(results)")
     }
     
     @objc func updateRealm() {
@@ -78,18 +109,14 @@ class ViewController: UIViewController {
         print("brand == \(String(describing: cars.first!.brand))")
     }
     
-    @objc func queryRealm() {
-        /* 条件查询(NSPredicate语法)
-         * 过滤、排序
-         * 过滤（filter）可以链式查询
-         * 排序 sorted(byKeyPath:) 和 sorted(byProperty:)
-         */
-        let books = defaultRealm.objects(Book.self).filter("name = '百年孤独'").sorted(byKeyPath: "price")
+    @objc func deleteRealm() {
+        let books = defaultRealm.objects(Book.self)
+        try! defaultRealm.write {
+            if books.count>0 { defaultRealm.delete(books.first!) } // 删除单个对象
+            defaultRealm.delete(books)  // 删除指定对象
+            defaultRealm.deleteAll()    // 删除所有数据（整个数据库数据）
+        }
         print("books == \(books)")
-        
-        // sorted 不支持 将多个属性用作排序基准，此外也无法链式排序（只有最后一个 sorted 调用会被使用） 如果要对多个属性进行排序，请使用 sorted(by:) 方法，然后向其中输入多个 SortDescriptor 对象。
-        let result = books.sorted(byKeyPath: "name")
-        print("result == \(result)")
     }
     
     func observeRealm() {

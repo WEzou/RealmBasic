@@ -43,6 +43,14 @@ class Book: BaseModel {
     let price = RealmOptional<Double>()
     // String、Date 以及 Data 属性能够通过标准的 Swift 语法来声明为可空类型或者必需（非空）类型。ower默认为nil
     @objc dynamic var ower: Person? //  多对一关系
+    
+    // 索引属性
+    /*
+     *，索引会稍微减慢写入速度，但是使用比较运算符进行查询的速度将会更快（它同样会造成 Realm 文件体积的增大，因为需要存储索引。）当您需要为某些特定情况优化读取性能的时候，那么最好添加索引。
+     */
+    override static func indexedProperties() -> [String] {
+        return ["name"]
+    }
 }
 
 class Car: BaseModel {
